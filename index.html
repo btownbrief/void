@@ -1005,69 +1005,96 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+// ── POLL CONFIG ──
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysaqqELuS-n8msn7YNwVzf3KKzBYOqlb1i7i82tN4FLETrboxy8LQmL5TNkDr92lP5/exec';
+let POLL = { id: '', question: '', options: [] };
 
-    // ── POLL CONFIG ──
-    const POLL = {
-        id: 'btownpoll_2025_w01',
-        question: "What's your go-to Burlington neighborhood for a night out?",
-        options: ['Church Street area', 'South End / Pine St', 'Old North End', 'Waterfront', 'Winooski']
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'pollcb_' + Date.now();
+    window[cbName] = (data) => {
+      delete window[cbName];
+      document.head.removeChild(script);
+      resolve(data);
     };
+    const script = document.createElement('script');
+    script.src   = url + '&callback=' + cbName;
+    script.onerror = () => reject(new Error('JSONP failed'));
+    document.head.appendChild(script);
+  });
+}
 
-    function initPoll() {
-        const voted = localStorage.getItem(POLL.id);
-        if (voted !== null) renderPollResults();
-        else renderPollVoting();
-    }
-    function renderPollVoting() {
-        document.getElementById('poll-question-text').textContent = POLL.question;
-        const container = document.getElementById('poll-options-container');
-        container.innerHTML = '';
-        POLL.options.forEach((opt, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'poll-option';
-            btn.textContent = opt;
-            btn.addEventListener('click', e => { e.stopPropagation(); castVote(i); });
-            container.appendChild(btn);
-        });
-        document.getElementById('poll-vote-view').style.display = 'block';
-        document.getElementById('poll-results-view').style.display = 'none';
-    }
-    function castVote(index) {
-        const key = POLL.id + '_votes';
-        const votes = JSON.parse(localStorage.getItem(key) || '{}');
-        votes[index] = (votes[index] || 0) + 1;
-        localStorage.setItem(key, JSON.stringify(votes));
-        localStorage.setItem(POLL.id, String(index));
-        renderPollResults();
-    }
-    function renderPollResults() {
-        const key = POLL.id + '_votes';
-        const votes = JSON.parse(localStorage.getItem(key) || '{}');
-        const myVote = parseInt(localStorage.getItem(POLL.id));
-        const total = Object.values(votes).reduce((a, b) => Number(a) + Number(b), 0);
-        document.getElementById('poll-results-question').textContent = POLL.question;
-        const container = document.getElementById('poll-results-container');
-        container.innerHTML = '';
-        POLL.options.forEach((opt, i) => {
-            const count = votes[i] || 0;
-            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-            const isMe = i === myVote;
-            const row = document.createElement('div');
-            row.className = 'poll-result-row';
-            row.innerHTML = `
-                <span class="poll-result-label" style="font-weight:${isMe?'900':'700'}">${isMe?'✓ ':''}${opt}</span>
-                <div class="poll-result-track">
-                    <div class="poll-result-fill ${isMe?'mine':''}" style="width:${pct}%"></div>
-                </div>
-                <span class="poll-result-pct">${pct}%</span>`;
-            container.appendChild(row);
-        });
-        document.getElementById('poll-meta-text').textContent =
-            `${total} vote${total !== 1 ? 's' : ''} · New poll every Wednesday`;
-        document.getElementById('poll-vote-view').style.display = 'none';
-        document.getElementById('poll-results-view').style.display = 'block';
-    }
-    initPoll();
+async function initPoll() {
+  try {
+    const data = await jsonp(`${APPS_SCRIPT_URL}?action=getPoll`);
+    POLL = { id: data.poll_id, question: data.question, options: data.options };
+    const voted = localStorage.getItem('voted_' + POLL.id);
+    if (voted !== null) renderPollResults();
+    else renderPollVoting();
+  } catch(e) {
+    document.getElementById('poll-question-text').textContent = 'Poll unavailable right now.';
+  }
+}
+
+function renderPollVoting() {
+  document.getElementById('poll-question-text').textContent = POLL.question;
+  const container = document.getElementById('poll-options-container');
+  container.innerHTML = '';
+  POLL.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'poll-option';
+    btn.textContent = opt;
+    btn.addEventListener('click', e => { e.stopPropagation(); castVote(i); });
+    container.appendChild(btn);
+  });
+  document.getElementById('poll-vote-view').style.display    = 'block';
+  document.getElementById('poll-results-view').style.display = 'none';
+}
+
+async function castVote(index) {
+  localStorage.setItem('voted_' + POLL.id, String(index));
+  try {
+    await jsonp(`${APPS_SCRIPT_URL}?action=vote&poll_id=${encodeURIComponent(POLL.id)}&option_index=${index}`);
+  } catch(e) { /* vote still recorded locally */ }
+  renderPollResults();
+}
+
+async function renderPollResults() {
+  const myVote = parseInt(localStorage.getItem('voted_' + POLL.id));
+  document.getElementById('poll-results-question').textContent = POLL.question;
+
+  let counts = {};
+  try {
+    const data = await jsonp(`${APPS_SCRIPT_URL}?action=getResults&poll_id=${encodeURIComponent(POLL.id)}`);
+    counts = data.counts || {};
+  } catch(e) {}
+
+  const total = Object.values(counts).reduce((a, b) => Number(a) + Number(b), 0);
+  const container = document.getElementById('poll-results-container');
+  container.innerHTML = '';
+
+  POLL.options.forEach((opt, i) => {
+    const count = counts[i] || 0;
+    const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
+    const isMe  = i === myVote;
+    const row   = document.createElement('div');
+    row.className = 'poll-result-row';
+    row.innerHTML = `
+      <span class="poll-result-label" style="font-weight:${isMe?'900':'700'}">${isMe?'✓ ':''}${opt}</span>
+      <div class="poll-result-track">
+        <div class="poll-result-fill ${isMe?'mine':''}" style="width:${pct}%"></div>
+      </div>
+      <span class="poll-result-pct">${pct}%</span>`;
+    container.appendChild(row);
+  });
+
+  document.getElementById('poll-meta-text').textContent =
+    `${total} vote${total !== 1 ? 's' : ''} · New poll every Wednesday`;
+  document.getElementById('poll-vote-view').style.display    = 'none';
+  document.getElementById('poll-results-view').style.display = 'block';
+}
+
+initPoll();
 
     // ── SLIDES ──
     const slides = Array.from(document.querySelectorAll('.slide'));
