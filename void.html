@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Btown Brief | The Void</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+
+        :root {
+            --bg-color: #f4f0ea;
+            --text-main: #111111;
+            --border-color: #111111;
+            --neon-pink:   #ff85a2;
+            --neon-green:  #00e676;
+            --neon-purple: #b185ff;
+            --neon-yellow: #ffde59;
+            --neon-blue:   #4dd0e1;
+            --neon-orange: #ff9e5e;
+            --card-white:  #ffffff;
+            --brutal-shadow:        4px 4px 0px rgba(17,17,17,1);
+            --brutal-shadow-active: 1px 1px 0px rgba(17,17,17,1);
+            --dot-daily:  #e63030;
+            --dot-weekly: #2563eb;
+            --dot-btown:  #f5c800;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--border-color);
+            font-family: 'Inter', sans-serif;
+            height: 100vh; height: 100dvh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%; height: 100%; max-width: 480px;
+            position: relative;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* ── PROGRESS BARS ── */
+        .progress-container {
+            display: flex; gap: 4px;
+            padding: 10px 16px 6px;
+            flex-shrink: 0;
+        }
+        .progress-bar-wrapper {
+            flex: 1; height: 4px;
+            background: rgba(17,17,17,0.15);
+            border-radius: 4px; overflow: hidden;
+        }
+        .progress-bar-fill { height: 100%; width: 0%; background: var(--text-main); }
+        .progress-bar-wrapper.completed .progress-bar-fill { width: 100%; }
+
+        /* ── META BAR ── */
+        .meta-bar {
+            padding: 6px 14px 9px;
+            border-bottom: 2px solid var(--border-color);
+            flex-shrink: 0;
+            display: flex; flex-direction: column; gap: 7px;
+        }
+        .legend { display: flex; gap: 14px; align-items: center; }
+        .legend-item {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 0.6rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: rgba(17,17,17,0.55);
+        }
+        .leg-dot {
+            width: 9px; height: 9px; border-radius: 50%;
+            flex-shrink: 0; border: 1.5px solid rgba(0,0,0,0.18);
+        }
+        .leg-dot.daily  { background: var(--dot-daily); }
+        .leg-dot.weekly { background: var(--dot-weekly); }
+        .leg-dot.btown  { background: var(--dot-btown); }
+
+        .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 5px 13px;
+            border: 2px solid var(--border-color);
+            border-radius: 99px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.67rem; font-weight: 800;
+            background: transparent; color: var(--text-main);
+            cursor: pointer; letter-spacing: 0.02em;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .filter-btn.active                  { background: var(--text-main); color: var(--bg-color); border-color: var(--text-main); }
+        .filter-btn.active[data-f="daily"]  { background: var(--dot-daily);  color: #fff; border-color: var(--dot-daily); }
+        .filter-btn.active[data-f="weekly"] { background: var(--dot-weekly); color: #fff; border-color: var(--dot-weekly); }
+        .filter-btn.active[data-f="btown"]  { background: var(--dot-btown);  color: var(--text-main); border-color: #c9a800; }
+
+        /* ── FILTER ACTIVE BANNER ── */
+        #filter-banner {
+            display: none;
+            padding: 5px 14px;
+            font-size: 0.6rem; font-weight: 900;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            border-bottom: 2px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        /* ── SLIDES CONTAINER ── */
+        .slides-container {
+            flex: 1; position: relative; overflow: hidden;
+        }
+        .slide {
+            position: absolute; inset: 0;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+            padding: 12px 16px 50px;
+            overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
+        }
+        .slide::-webkit-scrollbar { display: none; }
+        .slide.active { opacity: 1; pointer-events: auto; z-index: 10; }
+
+        /* ── SLIDE HEADER ── */
+        .slide-header { margin-bottom: 12px; }
+        .slide-header-top {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .slide-header h2 {
+            font-size: 2rem; font-weight: 900;
+            line-height: 1.05; letter-spacing: -0.04em; text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        /* ── SLIDE NAV STRIP ── */
+        .slide-nav {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        .slide-nav::-webkit-scrollbar { display: none; }
+        .slide-nav-item {
+            font-size: 0.58rem; font-weight: 700;
+            color: rgba(17,17,17,0.28);
+            white-space: nowrap;
+            padding: 2px 5px;
+            cursor: pointer;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+            user-select: none;
+        }
+        .slide-nav-item:active { background: rgba(17,17,17,0.08); }
+        .slide-nav-item.current {
+            color: var(--text-main);
+            font-weight: 900;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .slide-nav-sep {
+            font-size: 0.52rem;
+            color: rgba(17,17,17,0.2);
+            padding: 0 1px;
+            pointer-events: none;
+            user-select: none;
+        }
+        .slide-header p { font-size: 0.78rem; font-weight: 600; color: #666; margin-top: 2px; }
+
+        /* ── BENTO GRID ── */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding-bottom: 16px;
+        }
+
+        .card {
+            background-color: var(--card-white);
+            border: 3px solid var(--border-color);
+            border-radius: 18px; padding: 13px;
+            text-decoration: none; color: var(--text-main);
+            box-shadow: var(--brutal-shadow);
+            display: flex; flex-direction: column; justify-content: space-between;
+            min-height: 116px; position: relative;
+            transition: transform 0.1s, box-shadow 0.1s, opacity 0.25s;
+        }
+        .card:active { transform: translate(3px,3px); box-shadow: var(--brutal-shadow-active); }
+
+        .card.span-2 { grid-column: span 2; min-height: 98px; flex-direction: row; align-items: center; gap: 14px; }
+        .card.span-2 .emoji { font-size: 2.1rem; margin-bottom: 0; flex-shrink: 0; }
+
+        .card h3 { font-size: 1.02rem; font-weight: 800; line-height: 1.1; margin-bottom: 3px; }
+        .card p  { font-size: 0.76rem; font-weight: 600; opacity: 0.78; line-height: 1.35; }
+        .card .emoji { font-size: 1.75rem; display: block; margin-bottom: 8px; }
+
+        .bg-pink   { background-color: var(--neon-pink); }
+        .bg-green  { background-color: var(--neon-green); }
+        .bg-purple { background-color: var(--neon-purple); }
+        .bg-yellow { background-color: var(--neon-yellow); }
+        .bg-blue   { background-color: var(--neon-blue); }
+        .bg-orange { background-color: var(--neon-orange); }
+        .bg-dark   { background-color: var(--border-color); color: var(--bg-color); }
+
+        /* ── FREQUENCY DOTS ── */
+        .card::after {
+            content: ''; position: absolute; top: 9px; right: 9px;
+            width: 10px; height: 10px; border-radius: 50%;
+            border: 1.5px solid rgba(0,0,0,0.15);
+        }
+        .card[data-freq="daily"]:not([data-owner])::after    { background: var(--dot-daily); }
+        .card[data-freq="weekly"]:not([data-owner])::after   { background: var(--dot-weekly); }
+        .card[data-freq="asneeded"]:not([data-owner])::after { background: rgba(17,17,17,0.18); }
+        .card[data-owner="btown"]::after                     { background: var(--dot-btown); border-color: rgba(0,0,0,0.25); }
+        .bg-dark.card::after { border-color: rgba(255,255,255,0.3); }
+        .bg-dark.card[data-freq="asneeded"]:not([data-owner])::after { background: rgba(255,255,255,0.25); }
+        .bg-yellow.card[data-owner="btown"]::after { border-color: rgba(0,0,0,0.4); }
+
+        /* ── POLL CARD ── */
+        .poll-card {
+            grid-column: span 2;
+            min-height: auto !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0 !important;
+            cursor: default;
+            padding: 14px 14px 12px;
+        }
+        .poll-card:active { transform: none !important; box-shadow: var(--brutal-shadow) !important; }
+        .poll-label {
+            font-size: 0.58rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: rgba(17,17,17,0.45); margin-bottom: 5px;
+        }
+        .poll-question { font-size: 0.88rem; font-weight: 800; line-height: 1.3; margin-bottom: 10px; }
+        .poll-option {
+            width: 100%; padding: 6px 12px; margin: 3px 0;
+            border: 2px solid #111; border-radius: 8px;
+            background: rgba(17,17,17,0.05);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem; font-weight: 700;
+            cursor: pointer; text-align: left;
+            box-shadow: 2px 2px 0px #111;
+            transition: background 0.12s, transform 0.1s, box-shadow 0.1s;
+        }
+        .poll-option:active { transform: translate(2px,2px); box-shadow: none; }
+        .poll-option:hover  { background: rgba(17,17,17,0.1); }
+        .poll-result-row { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+        .poll-result-label { min-width: 100px; font-size: 0.67rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .poll-result-track { flex: 1; height: 16px; background: rgba(17,17,17,0.08); border-radius: 4px; border: 1.5px solid #111; overflow: hidden; }
+        .poll-result-fill { height: 100%; width: 0%; background: var(--neon-yellow); transition: width 0.5s ease; }
+        .poll-result-fill.mine { background: var(--neon-green); }
+        .poll-result-pct { min-width: 30px; text-align: right; font-size: 0.67rem; font-weight: 800; }
+        .poll-meta { font-size: 0.6rem; font-weight: 600; opacity: 0.4; margin-top: 6px; text-align: right; }
+
+        /* ── FILTER VIEW ── */
+        #filter-view {
+            flex: 1; display: none;
+            overflow-y: auto; padding: 12px 16px 50px;
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        #filter-view::-webkit-scrollbar { display: none; }
+        .filter-group-label {
+            font-size: 0.58rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.14em;
+            color: rgba(17,17,17,0.35);
+            margin: 14px 0 8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .filter-group-label:first-child { margin-top: 0; }
+        .filter-group-label::after { content: ''; flex: 1; height: 1px; background: rgba(17,17,17,0.1); }
+
+        /* ── PILLS ── */
+        .pill-grid { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 24px; }
+        .pill {
+            background-color: var(--card-white);
+            border: 2px solid var(--border-color);
+            border-radius: 12px; padding: 8px 12px;
+            text-decoration: none; color: var(--text-main);
+            box-shadow: 2px 2px 0px rgba(17,17,17,1);
+            display: flex; flex-direction: column; gap: 2px;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .pill:active { transform: translate(2px,2px); box-shadow: none; }
+        .pill-handle { font-size: 0.8rem; font-weight: 800; }
+        .pill-desc   { font-size: 0.66rem; font-weight: 500; opacity: 0.56; }
+        .pill.hero-pill { background: var(--neon-purple); width: 100%; }
+        .pill.hero-pill .pill-handle,
+        .pill.hero-pill .pill-desc { color: #fff; opacity: 1; }
+        .pill.hero-pill .pill-desc { opacity: 0.82; }
+        .pill.wide-pill { width: 100%; }
+        .pill-section-label {
+            width: 100%;
+            font-size: 0.58rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.12em;
+            color: rgba(17,17,17,0.38);
+            padding: 10px 2px 4px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .pill-section-label::after { content: ''; flex: 1; height: 1px; background: rgba(17,17,17,0.1); }
+
+        /* ── NAV ARROWS ── */
+        .nav-arrow {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 56px; height: 56px;
+            background: rgba(17,17,17,0.42);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.22);
+            border-radius: 50%; color: white;
+            font-size: 26px; font-weight: 800;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 150; cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            user-select: none;
+        }
+        .nav-arrow:active { background: rgba(17,17,17,0.72); }
+        .nav-arrow.left  { left: 8px; }
+        .nav-arrow.right { right: 8px; }
+        .nav-arrow.disabled { opacity: 0.14; pointer-events: none; }
+
+        /* ── BOTTOM HINT ── */
+        .tap-hint {
+            text-align: center; font-size: 11px; font-weight: 700;
+            color: rgba(17,17,17,0.3); padding: 5px; flex-shrink: 0;
+            letter-spacing: 0.06em; border-top: 1px solid rgba(17,17,17,0.08);
+        }
+
+        /* ── FOOD SUB-SECTION ── */
+        .sub-section-label {
+            font-size: 0.58rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.12em;
+            color: rgba(17,17,17,0.38); margin: 14px 0 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .sub-section-label::after { content:''; flex:1; height:1px; background:rgba(17,17,17,0.1); }
+    </style>
+</head>
+<body>
+<div id="app-container">
+
+    <div class="progress-container" id="progress-container"></div>
+
+    <div class="meta-bar">
+        <div class="legend">
+            <span class="legend-item"><span class="leg-dot daily"></span>Daily</span>
+            <span class="legend-item"><span class="leg-dot weekly"></span>Weekly</span>
+            <span class="legend-item"><span class="leg-dot btown"></span>Btown Made</span>
+        </div>
+        <div class="filter-bar">
+            <button class="filter-btn active" data-f="all">All</button>
+            <button class="filter-btn" data-f="daily">Daily</button>
+            <button class="filter-btn" data-f="weekly">Weekly</button>
+            <button class="filter-btn" data-f="btown">Mine ★</button>
+        </div>
+    </div>
+
+    <div id="filter-banner"></div>
+
+    <div class="slides-container" id="slides-container">
+        <div class="nav-arrow left disabled" id="prevArrow">&#8249;</div>
+        <div class="nav-arrow right" id="nextArrow">&#8250;</div>
+
+        <!-- ══ SLIDE 1 — THE HUB ══ -->
+        <div class="slide active" data-label="Hub">
+            <div class="slide-header">
+                <div class="slide-header-top">
+                    <h2>The Hub</h2>
+                    <nav class="slide-nav" id="slide-nav-0"></nav>
+                </div>
+                <p>The core Btown Brief ecosystem.</p>
+            </div>
+            <div class="bento-grid">
+
+                <!-- Condensed: Btown Brief + Trivia side by side -->
+                <a href="https://www.btownbrief.com/" target="_blank" class="card bg-purple"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">🗞️</div>
+                    <h3>Btown Brief</h3><p>Main newsletter — subscribe here</p>
+                </a>
+
+                <a href="https://daily-trivia-candbtjrukyyht8qqfmmmr.streamlit.app/" target="_blank" class="card bg-yellow"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">🧠</div>
+                    <h3>News Trivia</h3><p>5 Qs, 60 sec — Mon & Fri</p>
+                </a>
+
+                <!-- Telegram + 20s/30s side by side, both daily -->
+                <a href="https://t.me/+pULrkkS4vjBiZjEx" target="_blank" class="card bg-blue"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">💬</div>
+                    <h3>Telegram Groupchat</h3><p>Join the community chat</p>
+                </a>
+
+                <a href="https://ig.me/j/AbaIhxX4uh9ZUBvx/" target="_blank" class="card bg-pink"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">👥</div>
+                    <h3>20s/30s Groupchat</h3><p>Instagram group chat</p>
+                </a>
+
+                <a href="https://ig.me/j/AbYIB0NbclLYE1f5/" target="_blank" class="card bg-orange"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🏀</div>
+                    <h3>Basketball Chat</h3><p>Pickup ball IG group</p>
+                </a>
+
+                <a href="https://www.meetup.com/burlington-social-activites-group/" target="_blank" class="card bg-green"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🤝</div>
+                    <h3>Meetup Group</h3><p>Official Btown Brief in-person hangs</p>
+                </a>
+
+                <!-- Weekly Poll -->
+                <div class="card poll-card" id="pollCard"
+                     data-owner="btown" data-freq="weekly" data-no-filter="true">
+                    <div class="poll-label">🗳️ Weekly Poll — vote &amp; see results</div>
+                    <div id="poll-vote-view">
+                        <div class="poll-question" id="poll-question-text"></div>
+                        <div id="poll-options-container"></div>
+                    </div>
+                    <div id="poll-results-view" style="display:none;">
+                        <div class="poll-question" id="poll-results-question"></div>
+                        <div id="poll-results-container"></div>
+                        <div class="poll-meta" id="poll-meta-text"></div>
+                    </div>
+                </div>
+
+                <a href="https://www.btownbrief.com/archive" target="_blank" class="card bg-yellow"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">📁</div>
+                    <h3>Past Issues</h3><p>Archive in chronological order</p>
+                </a>
+
+                <a href="https://stephenvdavis-jpg.github.io/btown-news/btown-brief-archive.html" target="_blank" class="card bg-orange"
+                   data-owner="btown" data-freq="asneeded">
+                    <div class="emoji">🎲</div>
+                    <h3>Article Randomizer</h3><p>Random article picker</p>
+                </a>
+
+                <a href="https://www.btownbrief.com/local-vermont-podcasts" target="_blank" class="card bg-blue"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🎙️</div>
+                    <h3>VT Podcasts</h3><p>Curated local podcast directory</p>
+                </a>
+
+                <a href="https://www.btownbrief.com/city-council-meeting-summaries" target="_blank" class="card bg-pink"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🏛️</div>
+                    <h3>City Council</h3><p>Meeting summaries, no 3hr watch</p>
+                </a>
+
+                <a href="https://www.btownbrief.com/food-drink-deals" target="_blank" class="card bg-green"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🍺</div>
+                    <h3>Food Deals</h3><p>Happy hours & specials</p>
+                </a>
+
+                <a href="https://btownbrief.github.io/btown-basketball-league/" target="_blank" class="card bg-dark"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🏀</div>
+                    <h3>Btown Basketball League</h3><p>Pickup basketball league</p>
+                </a>
+
+                <a href="https://www.btownbrief.com/202-activites" target="_blank" class="card span-2"
+                   data-owner="btown" data-freq="asneeded">
+                    <div class="emoji">🗺️</div>
+                    <div><h3>202 Activities</h3><p>Burlington activity guide (revamp coming soon)</p></div>
+                </a>
+
+                <a href="https://stephenvdavis-jpg.github.io/t-shirts/index.html" target="_blank" class="card"
+                   data-owner="btown" data-freq="asneeded">
+                    <div class="emoji">👕</div>
+                    <h3>Merch Store</h3><p>Rep Btown</p>
+                </a>
+
+                <a href="https://ko-fi.com/btownbrief" target="_blank" class="card bg-pink"
+                   data-owner="btown" data-freq="asneeded">
+                    <div class="emoji">☕</div>
+                    <h3>Donate</h3><p>Support on Ko-fi</p>
+                </a>
+
+                <a href="https://www.btownbrief.com/about-me" target="_blank" class="card"
+                   data-owner="btown" data-freq="asneeded">
+                    <div class="emoji">👤</div>
+                    <h3>About Me</h3><p>Who runs this?</p>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 2 — FEEDS ══ -->
+        <div class="slide" data-label="Feeds">
+            <div class="slide-header">
+                <div class="slide-header-top">
+                    <h2>Feeds</h2>
+                    <nav class="slide-nav" id="slide-nav-1"></nav>
+                </div>
+                <p>Ad-free RSS & community forums.</p>
+            </div>
+            <div class="bento-grid">
+
+                <!-- Condensed: Mega Feed + Focused News side by side -->
+                <a href="https://www.inoreader.com/stream/user/1003590800/tag/Broader%20Local%20News%20%26%20Podcasts/view/html?cs=m" target="_blank" class="card bg-dark"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">🔥</div>
+                    <h3>Mega-Feed</h3><p>All local news + podcasts</p>
+                </a>
+
+                <a href="https://www.inoreader.com/stream/user/1003590800/tag/VT%20News%20%28Focused%29/view/html" target="_blank" class="card bg-blue"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">📡</div>
+                    <h3>Focused News</h3><p>Top 7 local sources, curated</p>
+                </a>
+
+                <a href="https://www.inoreader.com/stream/user/1003590800/tag/VT%20Podcasts/view/html" target="_blank" class="card bg-purple"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🎧</div>
+                    <h3>Podcasts Feed</h3><p>Vermont audio in one scroll</p>
+                </a>
+
+                <a href="https://www.inoreader.com/stream/user/1003590800/tag/Reddit%20%28r%2Fburlington%29/view/html?cs=m" target="_blank" class="card bg-orange"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">📰</div>
+                    <h3>r/Burlington RSS</h3><p>Ad-free — no Reddit ads</p>
+                </a>
+
+                <a href="https://www.inoreader.com/stream/user/1003590800/tag/Reddit%20%28r%2FVermont%29/view/html?cs=m" target="_blank" class="card bg-yellow"
+                   data-owner="btown" data-freq="daily">
+                    <div class="emoji">📰</div>
+                    <h3>r/Vermont RSS</h3><p>Ad-free — no Reddit ads</p>
+                </a>
+
+                <a href="https://www.reddit.com/r/burlington/?sort=top&t=day" target="_blank" class="card"
+                   data-freq="daily">
+                    <div class="emoji">🔴</div>
+                    <h3>r/BTV Direct</h3><p>Native Reddit, today's top</p>
+                </a>
+
+                <a href="https://www.reddit.com/r/vermont/?sort=top&t=day" target="_blank" class="card"
+                   data-freq="daily">
+                    <div class="emoji">🔴</div>
+                    <h3>r/Vermont Direct</h3><p>Native Reddit, today's top</p>
+                </a>
+
+                <a href="https://frontporchforum.com/old-north-end/forum" target="_blank" class="card bg-green"
+                   data-freq="daily">
+                    <div class="emoji">🏠</div>
+                    <h3>Front Porch Forum</h3><p>Old North End — pulse of the community</p>
+                </a>
+
+                <a href="https://www.facebook.com/groups/467539915278507" target="_blank" class="card bg-blue"
+                   data-freq="weekly">
+                    <div class="emoji">🎉</div>
+                    <h3>BTV 20 Somethings</h3><p>Young adults Burlington FB group</p>
+                </a>
+
+                <a href="https://www.facebook.com/groups/569949090540357" target="_blank" class="card bg-pink"
+                   data-freq="weekly">
+                    <div class="emoji">🍽️</div>
+                    <h3>Dine / To Go Tour</h3><p>Burlington foodie FB group</p>
+                </a>
+
+                <a href="https://www.facebook.com/groups/502280600349047" target="_blank" class="card span-2"
+                   data-freq="asneeded">
+                    <div class="emoji">🏙️</div>
+                    <div><h3>Burlington Area History</h3><p>Old photos & local nostalgia FB group</p></div>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 3 — EVENTS ══ -->
+        <div class="slide" data-label="Events">
+            <div class="slide-header">
+                <div class="slide-header-top">
+                    <h2>Events</h2>
+                    <nav class="slide-nav" id="slide-nav-2"></nav>
+                </div>
+                <p>What's happening in Chittenden County.</p>
+            </div>
+            <div class="bento-grid">
+
+                <a href="https://community.sevendaysvt.com/vermont/EventSearch?neighborhood=2124358%2C2124360&sortType=date&v=d" target="_blank" class="card span-2 bg-yellow"
+                   data-freq="daily">
+                    <div class="emoji">📅</div>
+                    <div><h3>Seven Days Events</h3><p>The definitive Burlington event calendar</p></div>
+                </a>
+
+                <a href="https://www.helloburlingtonvt.com/events/" target="_blank" class="card bg-pink"
+                   data-freq="daily">
+                    <div class="emoji">👋</div>
+                    <h3>Hello Burlington</h3><p>Clean city events aggregator</p>
+                </a>
+
+                <a href="https://www.facebook.com/events/" target="_blank" class="card bg-dark"
+                   data-freq="daily">
+                    <div class="emoji">📘</div>
+                    <h3>Facebook Events</h3><p>Another great source for events</p>
+                </a>
+
+                <!-- Condensed: Champlain Valley Cal + FPF Calendar side by side -->
+                <a href="https://www.mychamplainvalley.com/calendar/#/show?distance=10" target="_blank" class="card bg-blue"
+                   data-freq="daily">
+                    <div class="emoji">📅</div>
+                    <h3>Champlain Valley Cal</h3><p>Local TV station events. Jam packed.</p>
+                </a>
+
+                <a href="https://frontporchforum.com/old-north-end/calendar" target="_blank" class="card bg-orange"
+                   data-freq="daily">
+                    <div class="emoji">🏡</div>
+                    <h3>FPF Calendar</h3><p>King of community events.</p>
+                </a>
+
+                <a href="https://highergroundmusic.com/calendar/" target="_blank" class="card bg-dark"
+                   data-freq="weekly">
+                    <div class="emoji">🎵</div>
+                    <h3>Higher Ground</h3><p>Burlington's premier music venue</p>
+                </a>
+
+                <a href="https://www-vermontcomedyclub-com.seatengine.com/calendar" target="_blank" class="card bg-blue"
+                   data-freq="weekly">
+                    <div class="emoji">😂</div>
+                    <h3>VT Comedy Club</h3><p>National touring standup shows</p>
+                </a>
+
+                <a href="https://www.flynnvt.org/Events" target="_blank" class="card bg-purple"
+                   data-freq="weekly">
+                    <div class="emoji">🎭</div>
+                    <h3>The Flynn</h3><p>Theater & performing arts center</p>
+                </a>
+
+                <a href="https://fletcherfree.libcal.com/calendar?cid=21587" target="_blank" class="card bg-green"
+                   data-freq="weekly">
+                    <div class="emoji">📚</div>
+                    <h3>Fletcher Free Library</h3><p>Free programs, talks & events</p>
+                </a>
+
+                <a href="https://www.eventbrite.com/d/vt--burlington/all-events/" target="_blank" class="card"
+                   data-freq="weekly">
+                    <div class="emoji">🎟️</div>
+                    <h3>Eventbrite</h3><p>Ticketed events in the city</p>
+                </a>
+
+                <a href="https://www.meetup.com/find/?keywords=05401&source=EVENTS&distance=twentyFiveMiles&eventType=inPerson" target="_blank" class="card"
+                   data-freq="weekly">
+                    <div class="emoji">📍</div>
+                    <h3>Meetup.com</h3><p>In-person events within 25mi</p>
+                </a>
+
+                <a href="https://www.gameonvt.com/programs.php?gameon=1" target="_blank" class="card bg-orange"
+                   data-freq="weekly">
+                    <div class="emoji">🎮</div>
+                    <h3>Game On Programs</h3><p>Check listings for upcoming sports leagues</p>
+                </a>
+
+                <a href="https://www.gameonvt.com/index.php" target="_blank" class="card bg-green"
+                   data-freq="asneeded">
+                    <div class="emoji">🕹️</div>
+                    <h3>Game On VT</h3><p>VT's largest adult & youth rec sports organizer</p>
+                </a>
+
+                <a href="https://uvmathletics.evenue.net/" target="_blank" class="card bg-pink"
+                   data-freq="asneeded">
+                    <div class="emoji">🐱</div>
+                    <h3>UVM Tickets</h3><p>Catamount athletics tickets</p>
+                </a>
+
+                <a href="https://uvmathletics.com/archives" target="_blank" class="card"
+                   data-freq="asneeded">
+                    <div class="emoji">📊</div>
+                    <h3>UVM Archive</h3><p>Athletics history & records</p>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 4 — NEWS ══ -->
+        <div class="slide" data-label="News">
+            <div class="slide-header">
+                <div class="slide-header-top">
+                    <h2>News</h2>
+                    <nav class="slide-nav" id="slide-nav-3"></nav>
+                </div>
+                <p>Direct links to local journalism.</p>
+            </div>
+            <div class="bento-grid">
+
+                <a href="https://news.google.com/topics/CAAqHAgKIhZDQklTQ2pvSWJHOWpZV3hmZGpJb0FBUAE/sections/CAQiTkNCSVNORG9JYkc5allXeGZkakpDRUd4dlkyRnNYM1l5WDNObFkzUnBiMjV5Q2hJSUwyMHZNR2h3ZVhaNkNnb0lMMjB2TUdod2VYWW9BQSowCAAqLAgKIiZDQklTRmpvSWJHOWpZV3hmZGpKNkNnb0lMMjB2TUdod2VYWW9BQVABUAE?hl=en-US&gl=US&ceid=US%3Aen" target="_blank" class="card span-2 bg-blue"
+                   data-freq="daily">
+                    <div class="emoji">🌍</div>
+                    <div><h3>Google News — Local VT</h3><p>Burlington news aggregator</p></div>
+                </a>
+
+                <a href="https://vtdigger.org/" target="_blank" class="card bg-orange"
+                   data-freq="daily">
+                    <div class="emoji">🔍</div>
+                    <h3>VTDigger</h3><p>Nonprofit investigative journalism</p>
+                </a>
+
+                <a href="https://www.wcax.com/news/" target="_blank" class="card bg-dark"
+                   data-freq="daily">
+                    <div class="emoji">📺</div>
+                    <h3>WCAX News</h3><p>Channel 3 — Burlington TV news</p>
+                </a>
+
+                <a href="https://www.mychamplainvalley.com" target="_blank" class="card bg-blue"
+                   data-freq="daily">
+                    <div class="emoji">📺</div>
+                    <h3>My Champlain Valley</h3><p>Local 44 news & coverage</p>
+                </a>
+
+                <a href="https://www.wcax.com/weather/" target="_blank" class="card"
+                   data-freq="daily">
+                    <div class="emoji">⛅</div>
+                    <h3>WCAX Weather</h3><p>Channel 3 local forecast</p>
+                </a>
+
+                <a href="https://www.mynbc5.com/weather" target="_blank" class="card"
+                   data-freq="daily">
+                    <div class="emoji">🌦️</div>
+                    <h3>NBC5 Weather</h3><p>Radar & local forecast</p>
+                </a>
+
+                <a href="https://www.sevendaysvt.com/" target="_blank" class="card bg-yellow"
+                   data-freq="weekly">
+                    <div class="emoji">📅</div>
+                    <h3>Seven Days VT</h3><p>Vermont's weekly paper</p>
+                </a>
+
+                <a href="https://www.vermontpublic.org/" target="_blank" class="card bg-purple"
+                   data-freq="weekly">
+                    <div class="emoji">📻</div>
+                    <h3>Vermont Public</h3><p>Public radio, TV & news</p>
+                </a>
+
+                <a href="https://vtcommunitynews.org/" target="_blank" class="card bg-pink"
+                   data-freq="weekly">
+                    <div class="emoji">🏘️</div>
+                    <h3>VT Community News</h3><p>Hyper-local journalism</p>
+                </a>
+
+                <a href="https://vtcynic.com/" target="_blank" class="card bg-green"
+                   data-freq="weekly">
+                    <div class="emoji">🎓</div>
+                    <h3>Vermont Cynic</h3><p>UVM independent student paper</p>
+                </a>
+
+                <a href="https://vermontbiz.com/" target="_blank" class="card"
+                   data-freq="weekly">
+                    <div class="emoji">💼</div>
+                    <h3>Vermont Biz</h3><p>Business & economy news</p>
+                </a>
+
+                <a href="https://www.willistonobserver.com" target="_blank" class="card"
+                   data-freq="weekly">
+                    <div class="emoji">🗞️</div>
+                    <h3>Williston Observer</h3><p>Local paper just outside the city</p>
+                </a>
+
+                <a href="https://www.vtcng.com/otherpapersbvt/" target="_blank" class="card bg-orange"
+                   data-freq="weekly">
+                    <div class="emoji">🗞️</div>
+                    <h3>The Other Paper</h3><p>South Burlington local coverage</p>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 5 — FOOD ══ -->
+        <div class="slide" data-label="Food">
+            <div class="slide-header">
+                <div class="slide-header-top">
+                    <h2>Food</h2>
+                    <nav class="slide-nav" id="slide-nav-4"></nav>
+                </div>
+                <p>Burlington bites, deals & dining communities.</p>
+            </div>
+            <div class="bento-grid">
+
+                <a href="https://www.btownbrief.com/food-drink-deals" target="_blank" class="card span-2 bg-orange"
+                   data-owner="btown" data-freq="weekly">
+                    <div class="emoji">🍺</div>
+                    <div><h3>Food & Drink Deals</h3><p>Btown Brief's curated happy hours & specials list</p></div>
+                </a>
+
+                <div class="card span-2 bg-yellow"
+                     data-owner="btown" data-freq="asneeded" style="cursor:default;">
+                    <div class="emoji">🎲</div>
+                    <div><h3>Restaurant Randomizer</h3><p>Can't decide where to eat? Let it pick — coming soon!</p></div>
+                </div>
+
+                <a href="https://www.facebook.com/groups/569949090540357" target="_blank" class="card bg-pink"
+                   data-freq="weekly">
+                    <div class="emoji">🍽️</div>
+                    <h3>Dine In / To Go Tour</h3><p>Burlington's best foodie FB group</p>
+                </a>
+
+                <a href="https://www.reddit.com/r/burlington/search/?q=restaurant+food&sort=new&restrict_sr=1" target="_blank" class="card bg-blue"
+                   data-freq="weekly">
+                    <div class="emoji">🔍</div>
+                    <h3>BTV Food on Reddit</h3><p>Burlington restaurant discussions, new</p>
+                </a>
+
+                <a href="https://www.reddit.com/r/burlington/search/?q=where+to+eat&sort=top&t=year&restrict_sr=1" target="_blank" class="card bg-green"
+                   data-freq="asneeded">
+                    <div class="emoji">⭐</div>
+                    <h3>Top BTV Eats</h3><p>Best-of Burlington food threads, all time</p>
+                </a>
+
+                <a href="https://www.reddit.com/r/vermont/search/?q=restaurant+food+dining&sort=new&restrict_sr=1" target="_blank" class="card"
+                   data-freq="weekly">
+                    <div class="emoji">🔍</div>
+                    <h3>VT Food on Reddit</h3><p>Vermont dining discussions statewide</p>
+                </a>
+
+            </div>
+
+            <div class="sub-section-label">Local Restaurant Instagrams</div>
+            <div class="pill-grid">
+                <div class="pill" style="opacity:0.45; cursor:default; border-style:dashed; width:100%;">
+                    <span class="pill-handle">🍴 Full restaurant list coming soon</span>
+                    <span class="pill-desc">Adding all Burlington restaurant accounts — check back</span>
+                </div>
+                <a href="https://www.instagram.com/americanflatbread/" target="_blank" class="pill">
+                    <span class="pill-handle">@americanflatbread</span>
+                    <span class="pill-desc">Wood-fired pizza on Church St</span>
+                </a>
+                <a href="https://www.instagram.com/eatvermont/" target="_blank" class="pill bg-yellow" style="border-color:#111">
+                    <span class="pill-handle">@eatvermont</span>
+                    <span class="pill-desc">Best food finds across Vermont</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ══ SLIDE 6 — INSTAGRAM ══ -->
+        <div class="slide" data-label="Insta">
+            <div class="slide-header">
+                <div class="slide-header-top">
+                    <h2>Insta Roster</h2>
+                    <nav class="slide-nav" id="slide-nav-5"></nav>
+                </div>
+                <p>The definitive Burlington follow list.</p>
+            </div>
+            <div class="pill-grid">
+
+                <a href="https://www.instagram.com/btownbrief/" target="_blank" class="pill hero-pill">
+                    <span class="pill-handle">@btownbrief</span>
+                    <span class="pill-desc">Your local newsletter — tap the Repost tab for curated local content!</span>
+                </a>
+                <a href="https://www.instagram.com/btownbrief/following/" target="_blank" class="pill wide-pill">
+                    <span class="pill-handle">See who I'm following →</span>
+                    <span class="pill-desc">Full IG following list — even more good accounts to explore</span>
+                </a>
+
+                <span class="pill-section-label">News & Info</span>
+                <a href="https://www.instagram.com/helloburlington/" target="_blank" class="pill">
+                    <span class="pill-handle">@helloburlington</span>
+                    <span class="pill-desc">City events & things to do</span>
+                </a>
+                <a href="https://www.instagram.com/sevendaysvt/" target="_blank" class="pill">
+                    <span class="pill-handle">@sevendaysvt</span>
+                    <span class="pill-desc">Vermont's alternative weekly</span>
+                </a>
+                <a href="https://www.instagram.com/wcaxtv/" target="_blank" class="pill">
+                    <span class="pill-handle">@wcaxtv</span>
+                    <span class="pill-desc">Channel 3 local TV news</span>
+                </a>
+                <a href="https://www.instagram.com/vtdigger/" target="_blank" class="pill bg-orange" style="border-color:#111">
+                    <span class="pill-handle">@vtdigger</span>
+                    <span class="pill-desc">Investigative nonprofit journalism</span>
+                </a>
+                <a href="https://www.instagram.com/vermontpublic/" target="_blank" class="pill bg-blue" style="border-color:#111">
+                    <span class="pill-handle">@vermontpublic</span>
+                    <span class="pill-desc">Public radio & TV news</span>
+                </a>
+                <a href="https://www.instagram.com/meteorologist_allison_black/" target="_blank" class="pill">
+                    <span class="pill-handle">@meteorologist_allison_black</span>
+                    <span class="pill-desc">Your local weather forecaster</span>
+                </a>
+
+                <span class="pill-section-label">Arts, Music & Events</span>
+                <a href="https://www.instagram.com/highergroundmusic/" target="_blank" class="pill">
+                    <span class="pill-handle">@highergroundmusic</span>
+                    <span class="pill-desc">Burlington's main music venue</span>
+                </a>
+                <a href="https://www.instagram.com/vtcomedy/" target="_blank" class="pill">
+                    <span class="pill-handle">@vtcomedy</span>
+                    <span class="pill-desc">Vermont Comedy Club shows</span>
+                </a>
+                <a href="https://www.instagram.com/flynncenter/" target="_blank" class="pill">
+                    <span class="pill-handle">@flynncenter</span>
+                    <span class="pill-desc">Burlington performing arts center</span>
+                </a>
+                <a href="https://www.instagram.com/foampresents/" target="_blank" class="pill bg-green" style="border-color:#111">
+                    <span class="pill-handle">@foampresents</span>
+                    <span class="pill-desc">Burlington concert promoter</span>
+                </a>
+                <a href="https://www.instagram.com/radiobean/" target="_blank" class="pill">
+                    <span class="pill-handle">@radiobean</span>
+                    <span class="pill-desc">Beloved café & live music spot</span>
+                </a>
+                <a href="https://www.instagram.com/thesodaplant/" target="_blank" class="pill">
+                    <span class="pill-handle">@thesodaplant</span>
+                    <span class="pill-desc">South End music & events venue</span>
+                </a>
+                <a href="https://www.instagram.com/getdownvt/" target="_blank" class="pill">
+                    <span class="pill-handle">@getdownvt</span>
+                    <span class="pill-desc">Events & nightlife picks</span>
+                </a>
+                <a href="https://www.instagram.com/btvcityarts/" target="_blank" class="pill">
+                    <span class="pill-handle">@btvcityarts</span>
+                    <span class="pill-desc">Burlington city arts programming</span>
+                </a>
+
+                <span class="pill-section-label">Food & Drink</span>
+                <a href="https://www.instagram.com/eatvermont/" target="_blank" class="pill bg-yellow" style="border-color:#111">
+                    <span class="pill-handle">@eatvermont</span>
+                    <span class="pill-desc">Food & restaurant finds</span>
+                </a>
+                <a href="https://www.instagram.com/bfmvermont/" target="_blank" class="pill">
+                    <span class="pill-handle">@bfmvermont</span>
+                    <span class="pill-desc">Burlington Farmers Market</span>
+                </a>
+
+                <span class="pill-section-label">Sports & Outdoors</span>
+                <a href="https://www.instagram.com/btown.basketball.league/" target="_blank" class="pill bg-dark" style="color:#f4f0ea">
+                    <span class="pill-handle" style="color:#f4f0ea">@btown.basketball.league</span>
+                    <span class="pill-desc" style="color:rgba(244,240,234,0.6)">Btown pickup basketball league</span>
+                </a>
+                <a href="https://www.instagram.com/vermontgreenfc/" target="_blank" class="pill bg-green" style="border-color:#111">
+                    <span class="pill-handle">@vermontgreenfc</span>
+                    <span class="pill-desc">Vermont's pro soccer team</span>
+                </a>
+                <a href="https://www.instagram.com/uvmathletics/" target="_blank" class="pill">
+                    <span class="pill-handle">@uvmathletics</span>
+                    <span class="pill-desc">UVM Catamounts sports</span>
+                </a>
+                <a href="https://www.instagram.com/localmotionvermont/" target="_blank" class="pill">
+                    <span class="pill-handle">@localmotionvermont</span>
+                    <span class="pill-desc">Biking & active transportation</span>
+                </a>
+                <a href="https://www.instagram.com/keepvermontwild/" target="_blank" class="pill">
+                    <span class="pill-handle">@keepvermontwild</span>
+                    <span class="pill-desc">Outdoor adventure in VT</span>
+                </a>
+                <a href="https://www.instagram.com/vermont_explored/" target="_blank" class="pill">
+                    <span class="pill-handle">@vermont_explored</span>
+                    <span class="pill-desc">VT nature & exploration</span>
+                </a>
+
+                <span class="pill-section-label">City Life & Community</span>
+                <a href="https://www.instagram.com/loveburlington/" target="_blank" class="pill bg-pink" style="border-color:#111">
+                    <span class="pill-handle">@loveburlington</span>
+                    <span class="pill-desc">City life & local highlights</span>
+                </a>
+                <a href="https://www.instagram.com/btvparks/" target="_blank" class="pill">
+                    <span class="pill-handle">@btvparks</span>
+                    <span class="pill-desc">Burlington city parks dept.</span>
+                </a>
+                <a href="https://www.instagram.com/fletcherfree/" target="_blank" class="pill bg-blue" style="border-color:#111">
+                    <span class="pill-handle">@fletcherfree</span>
+                    <span class="pill-desc">Burlington's public library</span>
+                </a>
+                <a href="https://www.instagram.com/winooskivt/" target="_blank" class="pill">
+                    <span class="pill-handle">@winooskivt</span>
+                    <span class="pill-desc">City of Winooski official</span>
+                </a>
+                <a href="https://www.instagram.com/theboardroomvt/" target="_blank" class="pill">
+                    <span class="pill-handle">@theboardroomvt</span>
+                    <span class="pill-desc">Board game café in Burlington</span>
+                </a>
+                <a href="https://www.instagram.com/historicburlingtonvt/" target="_blank" class="pill">
+                    <span class="pill-handle">@historicburlingtonvt</span>
+                    <span class="pill-desc">Burlington history & old photos</span>
+                </a>
+                <a href="https://www.instagram.com/universityofvermont/" target="_blank" class="pill">
+                    <span class="pill-handle">@universityofvermont</span>
+                    <span class="pill-desc">UVM official account</span>
+                </a>
+
+                <span class="pill-section-label">Explore Vermont</span>
+                <a href="https://www.instagram.com/vermonttourism/" target="_blank" class="pill">
+                    <span class="pill-handle">@vermonttourism</span>
+                    <span class="pill-desc">Explore all of Vermont</span>
+                </a>
+                <a href="https://www.instagram.com/travelikealocalvt/" target="_blank" class="pill">
+                    <span class="pill-handle">@travelikealocalvt</span>
+                    <span class="pill-desc">Vermont travel tips from locals</span>
+                </a>
+
+            </div>
+        </div>
+
+    </div><!-- /slides-container -->
+
+    <div id="filter-view"></div>
+
+    <div class="tap-hint" id="tap-hint">← swipe or use arrows to navigate →</div>
+
+</div><!-- /app-container -->
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ── POLL CONFIG ──
+    const POLL = {
+        id: 'btownpoll_2025_w01',
+        question: "What's your go-to Burlington neighborhood for a night out?",
+        options: ['Church Street area', 'South End / Pine St', 'Old North End', 'Waterfront', 'Winooski']
+    };
+
+    function initPoll() {
+        const voted = localStorage.getItem(POLL.id);
+        if (voted !== null) renderPollResults();
+        else renderPollVoting();
+    }
+    function renderPollVoting() {
+        document.getElementById('poll-question-text').textContent = POLL.question;
+        const container = document.getElementById('poll-options-container');
+        container.innerHTML = '';
+        POLL.options.forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'poll-option';
+            btn.textContent = opt;
+            btn.addEventListener('click', e => { e.stopPropagation(); castVote(i); });
+            container.appendChild(btn);
+        });
+        document.getElementById('poll-vote-view').style.display = 'block';
+        document.getElementById('poll-results-view').style.display = 'none';
+    }
+    function castVote(index) {
+        const key = POLL.id + '_votes';
+        const votes = JSON.parse(localStorage.getItem(key) || '{}');
+        votes[index] = (votes[index] || 0) + 1;
+        localStorage.setItem(key, JSON.stringify(votes));
+        localStorage.setItem(POLL.id, String(index));
+        renderPollResults();
+    }
+    function renderPollResults() {
+        const key = POLL.id + '_votes';
+        const votes = JSON.parse(localStorage.getItem(key) || '{}');
+        const myVote = parseInt(localStorage.getItem(POLL.id));
+        const total = Object.values(votes).reduce((a, b) => Number(a) + Number(b), 0);
+        document.getElementById('poll-results-question').textContent = POLL.question;
+        const container = document.getElementById('poll-results-container');
+        container.innerHTML = '';
+        POLL.options.forEach((opt, i) => {
+            const count = votes[i] || 0;
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            const isMe = i === myVote;
+            const row = document.createElement('div');
+            row.className = 'poll-result-row';
+            row.innerHTML = `
+                <span class="poll-result-label" style="font-weight:${isMe?'900':'700'}">${isMe?'✓ ':''}${opt}</span>
+                <div class="poll-result-track">
+                    <div class="poll-result-fill ${isMe?'mine':''}" style="width:${pct}%"></div>
+                </div>
+                <span class="poll-result-pct">${pct}%</span>`;
+            container.appendChild(row);
+        });
+        document.getElementById('poll-meta-text').textContent =
+            `${total} vote${total !== 1 ? 's' : ''} · New poll every Wednesday`;
+        document.getElementById('poll-vote-view').style.display = 'none';
+        document.getElementById('poll-results-view').style.display = 'block';
+    }
+    initPoll();
+
+    // ── SLIDES ──
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+    let activeFilter = 'all';
+
+    // Gather slide labels
+    const slideLabels = slides.map(s => s.dataset.label || '');
+
+    // Build progress bars
+    const progressContainer = document.getElementById('progress-container');
+    for (let i = 0; i < totalSlides; i++) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'progress-bar-wrapper';
+        const fill = document.createElement('div');
+        fill.className = 'progress-bar-fill';
+        wrapper.appendChild(fill);
+        progressContainer.appendChild(wrapper);
+    }
+    const progressBars = document.querySelectorAll('.progress-bar-wrapper');
+
+    // Build slide nav strips inside each slide header
+    slides.forEach((slide, slideIndex) => {
+        const navEl = slide.querySelector('.slide-nav');
+        if (!navEl) return;
+        slideLabels.forEach((label, i) => {
+            if (i > 0) {
+                const sep = document.createElement('span');
+                sep.className = 'slide-nav-sep';
+                sep.textContent = '›';
+                navEl.appendChild(sep);
+            }
+            const item = document.createElement('span');
+            item.className = 'slide-nav-item';
+            item.textContent = label;
+            item.dataset.target = i;
+            item.addEventListener('click', e => {
+                e.stopPropagation();
+                goTo(i);
+            });
+            navEl.appendChild(item);
+        });
+    });
+
+    function updateNavStrips() {
+        slides.forEach(slide => {
+            const navItems = slide.querySelectorAll('.slide-nav-item');
+            navItems.forEach(item => {
+                item.classList.toggle('current', parseInt(item.dataset.target) === currentSlide);
+            });
+            // Auto-scroll the nav strip so current item is visible
+            const navEl = slide.querySelector('.slide-nav');
+            const currentItem = slide.querySelector('.slide-nav-item.current');
+            if (navEl && currentItem) {
+                const itemRight = currentItem.offsetLeft + currentItem.offsetWidth;
+                const navWidth  = navEl.offsetWidth;
+                if (itemRight > navEl.scrollLeft + navWidth) {
+                    navEl.scrollLeft = itemRight - navWidth + 8;
+                } else if (currentItem.offsetLeft < navEl.scrollLeft) {
+                    navEl.scrollLeft = currentItem.offsetLeft - 8;
+                }
+            }
+        });
+    }
+
+    const prevArrow    = document.getElementById('prevArrow');
+    const nextArrow    = document.getElementById('nextArrow');
+    const filterBtns   = document.querySelectorAll('.filter-btn');
+    const filterView   = document.getElementById('filter-view');
+    const filterBanner = document.getElementById('filter-banner');
+    const slidesContainer = document.getElementById('slides-container');
+    const tapHint = document.getElementById('tap-hint');
+
+    const FILTER_LABELS = {
+        daily:  { text: 'DAILY LINKS',  bg: 'var(--dot-daily)',  color: '#fff' },
+        weekly: { text: 'WEEKLY LINKS', bg: 'var(--dot-weekly)', color: '#fff' },
+        btown:  { text: 'BTOWN MADE',   bg: 'var(--dot-btown)',  color: '#111' }
+    };
+
+    const SLIDE_NAMES = {
+        'Hub': 'Hub', 'Feeds': 'Feeds', 'Events': 'Events',
+        'News': 'News', 'Food': 'Food', 'Insta': 'Instagram'
+    };
+
+    function buildFilterView(filter) {
+        filterView.innerHTML = '';
+        slides.forEach(slide => {
+            const label = slide.dataset.label || '';
+            const cards = slide.querySelectorAll('.card:not([data-no-filter])');
+            const matching = [];
+            cards.forEach(card => {
+                let show = false;
+                if (filter === 'btown') show = card.dataset.owner === 'btown';
+                else                    show = card.dataset.freq === filter;
+                if (show) matching.push(card);
+            });
+            if (matching.length === 0) return;
+            const groupLabel = document.createElement('div');
+            groupLabel.className = 'filter-group-label';
+            groupLabel.textContent = SLIDE_NAMES[label] || label;
+            filterView.appendChild(groupLabel);
+            const grid = document.createElement('div');
+            grid.className = 'bento-grid';
+            matching.forEach(card => grid.appendChild(card.cloneNode(true)));
+            filterView.appendChild(grid);
+        });
+    }
+
+    function applyFilter(filter) {
+        activeFilter = filter;
+        if (filter === 'all') {
+            filterView.style.display = 'none';
+            slidesContainer.style.display = '';
+            progressContainer.style.display = '';
+            filterBanner.style.display = 'none';
+            tapHint.textContent = '← swipe or use arrows to navigate →';
+            updateSlideUI();
+        } else {
+            buildFilterView(filter);
+            filterView.style.display = 'block';
+            slidesContainer.style.display = 'none';
+            progressContainer.style.display = 'none';
+            filterBanner.style.display = 'block';
+            const cfg = FILTER_LABELS[filter];
+            filterBanner.style.background = cfg.bg;
+            filterBanner.style.color = cfg.color;
+            filterBanner.textContent = `SHOWING: ${cfg.text}  ·  tap "All" to return`;
+            tapHint.textContent = '↑ scroll for all matching links ↑';
+        }
+    }
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFilter(btn.dataset.f);
+        });
+    });
+
+    function goTo(index) {
+        if (index < 0 || index >= totalSlides) return;
+        currentSlide = index;
+        updateSlideUI();
+    }
+
+    function updateSlideUI() {
+        slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+        progressBars.forEach((bar, i) => {
+            bar.classList.toggle('completed', i < currentSlide);
+            bar.querySelector('.progress-bar-fill').style.width = i <= currentSlide ? '100%' : '0%';
+        });
+        prevArrow.classList.toggle('disabled', currentSlide === 0);
+        nextArrow.classList.toggle('disabled', currentSlide === totalSlides - 1);
+        updateNavStrips();
+    }
+
+    prevArrow.addEventListener('click', () => goTo(currentSlide - 1));
+    nextArrow.addEventListener('click', () => goTo(currentSlide + 1));
+
+    const appContainer = document.getElementById('app-container');
+    appContainer.addEventListener('click', e => {
+        if (activeFilter !== 'all') return;
+        if (e.target.closest('a') || e.target.closest('.nav-arrow') ||
+            e.target.closest('.filter-btn') || e.target.closest('.poll-option') ||
+            e.target.closest('.slide-nav')) return;
+        const rect = appContainer.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        if (x < rect.width * 0.3) goTo(currentSlide - 1);
+        else if (x > rect.width * 0.7) goTo(currentSlide + 1);
+    });
+
+    let startX = 0, startY = 0;
+    appContainer.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+    appContainer.addEventListener('touchend', e => {
+        if (activeFilter !== 'all') return;
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 50 && Math.abs(dy) < Math.abs(dx)) {
+            dx > 0 ? goTo(currentSlide - 1) : goTo(currentSlide + 1);
+        }
+    }, { passive: true });
+
+    updateSlideUI();
+});
+</script>
+</body>
+</html>
